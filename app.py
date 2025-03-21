@@ -9,15 +9,23 @@ from sklearn.preprocessing import MinMaxScaler
 import matplotlib.pyplot as plt
 import io
 import base64
+import pathlib
 import os
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# モデル読み込み（30日後予測モデル）
-model_path = os.path.join(os.path.dirname(__file__), "stock_predict_30_ahead.keras")
-model = tf.keras.models.load_model(model_path)
+# モデルのパスを取得
+base_dir = pathlib.Path(__file__).parent.resolve()
+model_path = base_dir / "stock_predict_30_ahead.keras"
+
+# モデルが存在しない場合はエラーを発生させる
+if not model_path.exists():
+    raise FileNotFoundError(f"モデルファイルが見つかりません: {model_path}")
+
+# モデルの読み込み
+model = tf.keras.models.load_model(str(model_path))
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
@@ -26,6 +34,7 @@ async def home(request: Request):
 @app.post("/predict/", response_class=HTMLResponse)
 async def predict(request: Request, code: str = Form(...)):
     try:
+        # 株価データの取得
         data = yf.download(code, start='2010-01-01')
         if data.empty:
             return templates.TemplateResponse("index.html", {"request": request, "error": "株価データが取得できませんでした"})
@@ -51,6 +60,7 @@ async def predict(request: Request, code: str = Form(...)):
         ax.legend()
         fig.autofmt_xdate()
 
+        # グラフを画像としてエンコード
         buf = io.BytesIO()
         plt.savefig(buf, format="png")
         buf.seek(0)
