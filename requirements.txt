@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+tensorflow==2.12.0
+yfinance
+numpy
+scikit-learn
+jinja2
+python-multipart
+matplotlib
